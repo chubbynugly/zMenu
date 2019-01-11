@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using MenuAPI;
-using Newtonsoft.Json;
 using CitizenFX.Core;
-using static CitizenFX.Core.UI.Screen;
 using static CitizenFX.Core.Native.API;
 using static vMenuClient.CommonFunctions;
 using static vMenuShared.ConfigManager;
@@ -106,163 +102,7 @@ namespace vMenuClient
             }
             #endregion
 
-            if (EnableExperimentalFeatures || DebugMode)
-            {
-                RegisterCommand("testped", new Action<dynamic, List<dynamic>, string>((dynamic source, List<dynamic> args, string rawCommand) =>
-                {
-                    PedHeadBlendData data = Game.PlayerPed.GetHeadBlendData();
-                    Debug.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
-                }), false);
-
-                RegisterCommand("tattoo", new Action<dynamic, List<dynamic>, string>((dynamic source, List<dynamic> args, string rawCommand) =>
-                {
-                    if (args != null && args[0] != null && args[1] != null)
-                    {
-                        Debug.WriteLine(args[0].ToString() + " " + args[1].ToString());
-                        TattooCollectionData d = Game.GetTattooCollectionData(int.Parse(args[0].ToString()), int.Parse(args[1].ToString()));
-                        Debug.WriteLine("check");
-                        Debug.Write(JsonConvert.SerializeObject(d, Formatting.Indented) + "\n");
-                    }
-                }), false);
-            }
-
-            RegisterCommand("vmenuclient", new Action<dynamic, List<dynamic>, string>((dynamic source, List<dynamic> args, string rawCommand) =>
-            {
-                if (args != null)
-                {
-                    if (args.Count > 0)
-                    {
-                        if (args[0].ToString().ToLower() == "debug")
-                        {
-                            DebugMode = !DebugMode;
-                            Notify.Custom($"Debug mode is now set to: {DebugMode}.");
-                            // Set discord rich precense once, allowing it to be overruled by other resources once those load.
-                            if (DebugMode)
-                            {
-                                SetRichPresence($"Debugging vMenu {Version}!");
-                            }
-                            else
-                            {
-                                SetRichPresence($"Enjoying FiveM!");
-                            }
-                        }
-                        else if (args[0].ToString().ToLower() == "gc")
-                        {
-                            GC.Collect();
-                            Debug.Write("Cleared memory.\n");
-                        }
-                        else if (args[0].ToString().ToLower() == "dump")
-                        {
-                            Notify.Info("A full config dump will be made to the console. Check the log file. This can cause lag!");
-                            Debug.WriteLine("\n\n\n########################### vMenu ###########################");
-                            Debug.WriteLine($"Running vMenu Version: {Version}, Experimental features: {EnableExperimentalFeatures}, Debug mode: {DebugMode}.");
-                            Debug.WriteLine("\nDumping a list of all KVPs:");
-                            int handle = StartFindKvp("");
-                            List<string> names = new List<string>();
-                            while (true)
-                            {
-                                string k = FindKvp(handle);
-                                if (string.IsNullOrEmpty(k))
-                                {
-                                    break;
-                                }
-                                //if (!k.StartsWith("settings_") && !k.StartsWith("vmenu") && !k.StartsWith("veh_") && !k.StartsWith("ped_") && !k.StartsWith("mp_ped_"))
-                                //{
-                                //    DeleteResourceKvp(k);
-                                //}
-                                names.Add(k);
-                            }
-                            EndFindKvp(handle);
-
-                            Dictionary<string, dynamic> kvps = new Dictionary<string, dynamic>();
-                            foreach (var kvp in names)
-                            {
-                                int type = 0; // 0 = string, 1 = float, 2 = int.
-                                if (kvp.StartsWith("settings_"))
-                                {
-                                    if (kvp == "settings_voiceChatProximity") // float
-                                    {
-                                        type = 1;
-                                    }
-                                    else if (kvp == "settings_clothingAnimationType") // int
-                                    {
-                                        type = 2;
-                                    }
-                                }
-                                else if (kvp == "vmenu_cleanup_version") // int
-                                {
-                                    type = 2;
-                                }
-                                switch (type)
-                                {
-                                    case 0:
-                                        var s = GetResourceKvpString(kvp);
-                                        if (s.StartsWith("{") || s.StartsWith("["))
-                                        {
-                                            kvps.Add(kvp, JsonConvert.DeserializeObject(s));
-                                        }
-                                        else
-                                        {
-                                            kvps.Add(kvp, GetResourceKvpString(kvp));
-                                        }
-                                        break;
-                                    case 1:
-                                        kvps.Add(kvp, GetResourceKvpFloat(kvp));
-                                        break;
-                                    case 2:
-                                        kvps.Add(kvp, GetResourceKvpInt(kvp));
-                                        break;
-                                }
-                            }
-                            Debug.WriteLine(@JsonConvert.SerializeObject(kvps, Formatting.None) + "\n");
-
-                            Debug.WriteLine("\n\nDumping a list of allowed permissions:");
-                            Debug.WriteLine(@JsonConvert.SerializeObject(Permissions, Formatting.None));
-
-                            Debug.WriteLine("\n\nDumping vmenu server configuration settings:");
-                            var settings = new Dictionary<string, string>();
-                            foreach (var a in Enum.GetValues(typeof(Setting)))
-                            {
-                                settings.Add(a.ToString(), GetSettingsString((Setting)a));
-                            }
-                            Debug.WriteLine(@JsonConvert.SerializeObject(settings, Formatting.None));
-                            Debug.WriteLine("\nEnd of vMenu dump!");
-                            Debug.WriteLine("\n########################### vMenu ###########################");
-                        }
-                    }
-                    else
-                    {
-                        Notify.Custom($"vMenu is currently running version: {Version}.");
-                    }
-                }
-            }), false);
-
-            // Set discord rich precense once, allowing it to be overruled by other resources once those load.
-            if (DebugMode)
-            {
-                SetRichPresence($"Debugging vMenu {Version}!");
-            }
-
-            if (GetCurrentResourceName() != "vMenu")
-            {
-                Exception InvalidNameException = new Exception("\r\n\r\n[vMenu] INSTALLATION ERROR!\r\nThe name of the resource is not valid. Please change the folder name from '" + GetCurrentResourceName() + "' to 'vMenu' (case sensitive) instead!\r\n\r\n\r\n");
-                try
-                {
-                    throw InvalidNameException;
-                }
-                catch (Exception e)
-                {
-                    Log(e.Message);
-                }
-                TriggerEvent("chatMessage", "^3IMPORTANT: vMenu IS NOT SETUP CORRECTLY. PLEASE CHECK THE SERVER LOG FOR MORE INFO.");
-                MenuController.MainMenu = null;
-                MenuController.DontOpenAnyMenu = true;
-                MenuController.DisableMenuButtons = true;
-            }
-            else
-            {
-                Tick += OnTick;
-            }
+            Tick += OnTick;
             SetClockDate(DateTime.Now.Day, DateTime.Now.Month, DateTime.Now.Year);
         }
 
@@ -366,13 +206,6 @@ namespace vMenuClient
                 {
                     StatSetInt((uint)GetHashKey("MP0_STAMINA"), 0, true);
                 }
-                // Manage other stats.
-                StatSetInt((uint)GetHashKey("MP0_STRENGTH"), 100, true);
-                StatSetInt((uint)GetHashKey("MP0_LUNG_CAPACITY"), 80, true); // reduced because it was over powered
-                StatSetInt((uint)GetHashKey("MP0_WHEELIE_ABILITY"), 100, true);
-                StatSetInt((uint)GetHashKey("MP0_FLYING_ABILITY"), 100, true);
-                StatSetInt((uint)GetHashKey("MP0_SHOOTING_ABILITY"), 50, true); // reduced because it was over powered
-                StatSetInt((uint)GetHashKey("MP0_STEALTH_ABILITY"), 100, true);
             }
             #endregion
 

@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using MenuAPI;
-using Newtonsoft.Json;
 using CitizenFX.Core;
 using CitizenFX.Core.UI;
 using static CitizenFX.Core.UI.Screen;
