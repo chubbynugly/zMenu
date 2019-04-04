@@ -1543,10 +1543,6 @@ namespace vMenuClient
                         {
                             restoreDefault = true;
                         }
-                        else
-                        {
-                            Notify.Error("You did not set a saved character to restore to. Do so in the ~g~MP Ped Customization~s~ > ~g~Saved Characters~s~ menu.");
-                        }
                     }
                     if (!restoreDefault)
                     {
